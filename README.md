@@ -56,8 +56,8 @@ The ZPL will have the following format:
 `^GF` is the ZPL command for use-once image rendering (that is, the image is not
 saved to the printer for later recall by other label formats).
 
-The rendered image is the actual Z64 data decoded and then drawn to a canvas.
-If you are interested in that bit of functionality, look for `z64ToCanvas`
+The rendered image displayed on the page is the actual Z64 data decoded and then drawn
+to a canvas.  If you are interested in that bit of functionality, look for `z64ToCanvas`
 in the html file.
 
 ## Generic Browser Usage
