@@ -205,7 +205,7 @@ const fs = require('fs');
 const JPG = require('jpeg-js');
 const rgbaToZ64 = require('zpl-image').rgbaToZ64;
 
-let buf = fs.readFile('tux.jpg');
+let buf = fs.readFileSync('tux.jpg');
 let jpg = JPG.decode(buf);
 let res = rgbaToZ64(jpg.data, jpg.width, { black:51, rotate:'I' });
 ```
