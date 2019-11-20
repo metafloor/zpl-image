@@ -177,7 +177,7 @@ function convertImage() {
 	cvs.height = grf.height;
 	cvs.getContext('2d').drawImage(grf, 0, 0);
 
-	// Display the ZPL with a source comment
+	// Create the ZPL with a source comment
 	document.getElementById('zpltext').value = 
 		'^FX ' + _filename + ' (' + res.width + 'x' + res.height + 'px, ' +
 			 rot + '-Rotate, ' + black + '% Black)^FS\n' +
@@ -212,9 +212,9 @@ function z64ToCanvas(z64, rowl) {
 	let ctx  = cvs.getContext('2d');
 	let bmap = ctx.getImageData(0, 0, w, h);
 	let data = bmap.data;
+	let offs = 0;
 	for (let i = 0; i < l; i++) {
 		let byte = grf[i];
-		let offs = i * 32;	// 8 bits per byte, 4 bytes per RGBA
 		for (let bit = 0x80; bit; bit = bit >>> 1, offs += 4) {
 			if (bit & byte) {
 				data[offs]   = 0;
@@ -248,7 +248,8 @@ function z64ToCanvas(z64, rowl) {
 		<td colspan=2 style="position:relative;padding-left:10mm">
 			<button id="copyzpl" style="visibility:hidden"></button>
 	<tr><th>Black Threshold
-		<td><input type="number" id="black" min="1" max="99" step="1" value="50"><span>1..99</span>
+		<td><input type="number" id="black" min="1" max="99" step="1" value="50">
+			<span>1..99</span>
         <td><label for="notrim">
 			<input type="checkbox" id="notrim" value="Y">&nbsp;No&nbsp;Trim</label>
 	</table>

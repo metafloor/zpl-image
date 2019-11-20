@@ -25,7 +25,7 @@ Rotation is specified as one of the values:
   - `'L'` : Left, 90 degrees counter-clockwise rotation.
   - `'R'` : Right, 90 degrees clockwise rotation.
   - `'I'` : Inverted, 180 degrees rotation.
-  - `'B'` : Same as `'I'` but named to match the ZPL notation for bottom up.
+  - `'B'` : Same as `'L'` but named to match the ZPL notation.
 
 Blackness and rotation are passed via an options object.  For example, to specify
 a black threshold of 56% and rotation of -90 degrees, you would pass in:
@@ -74,8 +74,8 @@ frequently.  It is primarily intended for the demo html file but should be suffi
 for production use.
 
 ```javascript
-// Works with <img> and <canvas> elements or any element that is compatible with
-// CanvasRenderingContext2D.drawImage().
+// Works with <img> and <canvas> elements or any element that is
+// compatible with CanvasRenderingContext2D.drawImage().
 let img = document.getElementById('image');
 let res = imageToZ64(img);	// Uses all defaults
 
@@ -188,7 +188,7 @@ const rgbaToZ64 = require('zpl-image').rgbaToZ64;
 
 let buf = fs.readFileSync('tux.gif');
 let gif = new GIF.GifReader(buf);
-let rgba = Buffer.alloc(gif.width * gif.height);
+let rgba = Buffer.alloc(gif.width * gif.height * 4);
 
 // Decode only the first frame
 gif.decodeAndBlitFrameRGBA(0, rgba);

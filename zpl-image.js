@@ -42,7 +42,7 @@ function imageToZ64(img, opts) {
 //			'L' rotate 90 degrees counter-clockwise
 //			'R' rotate 90 degrees clockwise
 //			'I' rotate 180 degrees (inverted)
-//			'B' same as 'I'
+//			'B' same as 'L'
 function rgbaToZ64(rgba, width, opts) {
 	opts = opts || {};
 	width = width|0;
@@ -58,8 +58,8 @@ function rgbaToZ64(rgba, width, opts) {
 	let buf;
 	switch (opts.rotate) {
 	case 'R': buf = right(mono); break;
-	case 'L': buf = left(mono); break;
 	case 'B':
+	case 'L': buf = left(mono); break;
 	case 'I': buf = invert(mono); break;
 	default:  buf = normal(mono); break;
 	}
