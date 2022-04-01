@@ -3,6 +3,7 @@
   "version": "0.1.2",
   "description": "A pure javascript module that converts PNG, JPEG, and GIF to Z64-encoded GRF bitmaps for use with ZPL.",
   "main": "zpl-image.js",
+  "module": "zpl-image-esm.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

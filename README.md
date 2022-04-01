@@ -1,11 +1,15 @@
 
 # zpl-image
 
-A pure javascript module that converts images to Z64-encoded GRF bitmaps for use with ZPL.
-Works in both node.js and modern browsers.
+A pure javascript module that converts images to either Z64-encoded or ACS-encoded GRF bitmaps for use with ZPL.
+The term ACS (Alternative Compression Scheme) denotes the run-length compression algorithm described in the section
+of the ZPL Reference Manual titled "Alternative Data Compression Scheme".  Z64 typically gives better compression
+but is not available on all printers (especially older ones).  The ACS encoding should work on any printer made
+since the mid 90s, maybe earlier.
 
 This module provides the following features:
 
+  - Works in both node.js and modern browsers.
   - Converts the image to grayscale, then applies a user-supplied blackness
     threshold to decide which pixels are black.
   - Optionally removes any empty/white space around the edges of the image.
@@ -13,8 +17,8 @@ This module provides the following features:
     is often necessary as ZPL does not provide the ability to rotate an image 
     during formatting.
   - Converts the monochrome image to a GRF bitmap.
-  - Uses zlib in node.js or pako.js in the browser to compress the GRF bitmap.
-  - Encodes the compressed bitmap in base64 and calculates the required CRC16 checksum.
+  - Converts the GRF bitmap to either Z64 or ACS encoding.
+  - For Z64, zlib in node.js or pako.js in the browser is used for compression.
 
 The blackness threshold is specified as an integer between 1 and 99 (think of it as a
 gray percentage).  Pixels darker than the gray% are converted to black.  The default is 50.
@@ -43,12 +47,12 @@ Included with this module is the file `zpl-image.html`.  You can run it directly
 from the browser using the `file://` scheme.  It lets you drag and drop an image
 and then interactively adjust the blackness threshold and rotation.
 
-When you are satisfied with the results, you can copy the generated ZPL to the clipboard.
-The ZPL will have the following format:
+When you are satisfied with the results, select either Z64 or ACS encoding and
+click the clipboard icon to copy the ZPL.  The ZPL will have the following format:
 
 ```
 ^FX filename.ext (WxHpx, X-Rotate, XX% Black)^FS
-^GFA,grflen,grflen,rowlen,:Z64:...base64...encoding...:crc16
+^GFA,grflen,grflen,rowlen,...ASCII-armored-encoding...
 ```
 
 `^FX ... ^FS` is a ZPL comment.
@@ -56,9 +60,9 @@ The ZPL will have the following format:
 `^GF` is the ZPL command for use-once image rendering (that is, the image is not
 saved to the printer for later recall by other label formats).
 
-The rendered image displayed on the page is the actual Z64 data decoded and then drawn
+The rendered image displayed on the page is the actual data decoded and then drawn
 to a canvas.  If you are interested in that bit of functionality, look for `z64ToCanvas`
-in the html file.
+and `acsToCanvas` in the `zpl-image.html` file.
 
 ## Generic Browser Usage
 
@@ -97,6 +101,10 @@ by both node.js and `imageToZ64()`.  See the node.js section for more details.
 let res = rgbaToZ64(rgba, width, { black:55, rotate:'I' });
 ```
 
+The same interfaces exist for ACS encoding, using the functions `imageToACS()` and
+`rgbaToACS()`.  The returned object from each function is identical to the above, with
+the exception that the encoded text is in the `acs` property instead of `z64`.
+
 ## RequireJS Browser Usage
 
 This is untested but the module exports are wrapped in a UMD, so in theory you
@@ -104,22 +112,32 @@ should be able to use this with RequireJS.  The exports are the same as with the
 generic browser usage:
 
 ```javascript
+// Use the Z64 interface
 const { imageToZ64, rgbaToZ64 } = require("zpl-image");
+
+// Or the ACS interface
+const { imageToACS, rgbaToACS } = require("zpl-image");
 ```
 
 ## Node.js Usage
 
-The return from `require("zpl-image")` is currently a single named function
-`rgbaToZ64()`.
+The exports from `require("zpl-image")` are the functions `rgbaToZ64()` and
+`rgbaToACS()`.
 
 ```javascript
+// The Z64 interface
 const rgbaToZ64 = require("zpl-image").rgbaToZ64;
+
+// The ACS interface
+const rgbaToACS = require("zpl-image").rgbaToACS;
+
 ```
 
-The method takes two or three parameters:
+Both methods take two or three parameters:
 
 ```
 rgbaToZ64(rgba, width [, opts])
+rgbaToACS(rgba, width [, opts])
 ```
 
 `rgba` is an array-like object with length equal to `width * height * 4`.
@@ -142,6 +160,9 @@ examples showing three different image modules:
   - [pngjs](https://www.npmjs.com/package/pngjs)
   - [omggif](https://www.npmjs.com/package/omggif)
   - [jpeg-js](https://www.npmjs.com/package/jpeg-js)
+
+All of the following examples show Z64 encoding but can be switched to ACS 
+by simply renaming `Z64` to `ACS`.
 
 ## pngjs (PNG Conversion)
 

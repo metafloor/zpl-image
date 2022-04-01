@@ -16,6 +16,17 @@
 const zlib = typeof process == 'object' && typeof process.release == 'object' &&
 				process.release.name == 'node' ? require('zlib') : null;
 
+const hexmap = (()=> {
+    let arr = Array(256);
+    for (let i = 0; i < 16; i++) {
+        arr[i] = '0' + i.toString(16);
+    }
+    for (let i = 16; i < 256; i++) {
+        arr[i] = i.toString(16);
+    }
+    return arr;
+})();
+
 // DOM-specialized version for browsers.
 function imageToZ64(img, opts) {
 	// Draw the image to a temp canvas so we can access its RGBA data
@@ -30,6 +41,19 @@ function imageToZ64(img, opts) {
 	return rgbaToZ64(pixels.data, pixels.width, opts);
 }
 
+// DOM-specialized version for browsers.
+function imageToACS(img, opts) {
+	// Draw the image to a temp canvas so we can access its RGBA data
+	let cvs = document.createElement('canvas');
+	let ctx = cvs.getContext('2d');
+
+	cvs.width  = +img.width || img.offsetWidth;
+	cvs.height = +img.height || img.offsetHeight;
+	ctx.drawImage(img, 0, 0);
+
+	let pixels = ctx.getImageData(0, 0, cvs.width, cvs.height);
+	return rgbaToACS(pixels.data, pixels.width, opts);
+}
 
 // Uses zlib on node.js, pako.js in the browser.
 //
@@ -83,6 +107,90 @@ function rgbaToZ64(rgba, width, opts) {
 		width:	imgw,		// rotated image width in pixels
 		height:	imgh,		// rotated image height in pixels
 		z64:	':Z64:' + b64 + ':' + crc16(b64),
+	};
+}
+
+// Implements the Alternative Data Compression Scheme as described in the ref manual.
+//
+// `rgba` can be a Uint8Array or Buffer, or an Array of integers between 0 and 255.
+// `width` is the image width, in pixels
+// `opts` is an options object:
+//		`black` is the blackness percent between 1..99, default 50.
+//		`rotate` is one of:
+//			'N' no rotation (default)
+//			'L' rotate 90 degrees counter-clockwise
+//			'R' rotate 90 degrees clockwise
+//			'I' rotate 180 degrees (inverted)
+//			'B' same as 'L'
+function rgbaToACS(rgba, width, opts) {
+	opts = opts || {};
+	width = width|0;
+	if (!width || width < 0) {
+		throw new Error('Invalid width');
+	}
+	let height = ~~(rgba.length / width / 4);
+
+	// Create a monochome image, cropped to remove padding.
+	// The return is a Uint8Array with extra properties width and height.
+	let mono = monochrome(rgba, width, height, +opts.black || 50, opts.notrim);
+
+	let buf;
+	switch (opts.rotate) {
+	case 'R': buf = right(mono); break;
+	case 'B':
+	case 'L': buf = left(mono); break;
+	case 'I': buf = invert(mono); break;
+	default:  buf = normal(mono); break;
+	}
+
+	// Encode in hex and apply the "Alternative Data Compression Scheme"
+    //
+    //      G   H   I   J   K   L   M   N   O   P   Q   R   S   T   U   V   W   X   Y
+    //      1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19
+    //
+    //      g   h   i   j   k   l   m   n   o   p   q   r   s   t   u   v   w   x   y   z   
+    //     20  40  60  80 100 120 140 160 180 200 220 240 260 280 300 320 340 360 380 400
+    //
+	let imgw = buf.width;
+	let imgh = buf.height;
+	let rowl = ~~((imgw + 7) / 8);
+
+    let hex = '';
+    for (let i = 0, l = buf.length; i < l; i++) {
+        hex += hexmap[buf[i]];
+    }
+    let acs = '';
+    let re = /([0-9a-fA-F])\1{2,}/g;
+    let match = re.exec(hex);
+    let offset = 0;
+    while (match) {
+        acs += hex.substring(offset, match.index);
+        let l = match[0].length;
+        while (l >= 400) {
+            acs += 'z';
+            l -= 400;
+        }
+        if (l >= 20) {
+            acs += '_ghijklmnopqrstuvwxy'[((l / 20)|0)];
+            l = l % 20;
+        }
+        if (l) {
+            acs += '_GHIJKLMNOPQRSTUVWXY'[l];
+        }
+        acs += match[1];
+        offset = re.lastIndex;
+        match = re.exec(hex);
+    }
+    acs += hex.substr(offset);
+
+	// Example usage of the return value `rv`:
+	//		'^GFA,' + rv.length + ',' + rv.length + ',' + rv.rowlen + ',' + rv.acs
+	return {
+		length:	buf.length,	// uncompressed number of bytes
+		rowlen:	rowl,		// number of packed bytes per row
+		width:	imgw,		// rotated image width in pixels
+		height:	imgh,		// rotated image height in pixels
+		acs:	acs,
 	};
 }
 
@@ -330,5 +438,5 @@ function crc16(s) {
 	return '0000'.substr(crc.length) + crc;
 }
 
-return zlib ? { rgbaToZ64 } : { rgbaToZ64, imageToZ64 };
+return zlib ? { rgbaToZ64, rgbaToACS } : { rgbaToZ64, rgbaToACS, imageToZ64, imageToACS };
 }));

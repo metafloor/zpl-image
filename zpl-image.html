@@ -103,6 +103,8 @@ window.addEventListener('load', function() {
 	document.getElementById('rotI').addEventListener('click', convertImage, false);
 	document.getElementById('black').addEventListener('input', convertImage, false); 
 	document.getElementById('notrim').addEventListener('click', convertImage, false);
+	document.getElementById('acscomp').addEventListener('click', convertImage, false);
+	document.getElementById('z64comp').addEventListener('click', convertImage, false);
 	document.getElementById('copyzpl').addEventListener('click', copyZPL, false);
 
 	// Setup the drop target
@@ -163,25 +165,34 @@ function convertImage() {
 	}
 	let black  = +document.getElementById('black').value || 50;
 	let rotrad = document.querySelector('input[name=rot]:checked');
+	let comprad = document.querySelector('input[name=compress]:checked');
 	let rot = rotrad && rotrad.value || 'N';
+    let comp = comprad && comprad.value || 'Z64';
 	let notrim = document.getElementById('notrim').checked;
 
 	// Get the image and convert to Z64
 	let img = document.getElementById('image');
-	let res = imageToZ64(img, { black:black, rotate:rot, notrim:notrim });
+	let res;
+	let bmp; // actually a canvas object
+    if (comp == 'Z64') {
+        res = imageToZ64(img, { black:black, rotate:rot, notrim:notrim });
+        bmp = z64ToCanvas(res.z64, res.rowlen);
+    } else {
+        res = imageToACS(img, { black:black, rotate:rot, notrim:notrim });
+        bmp = acsToCanvas(res.acs, res.rowlen);
+    }
 	
-	// Draw the Z64-encoded image to our canvas
-	let grf = z64ToCanvas(res.z64, res.rowlen);
+	// Draw the image to our canvas
 	let cvs = document.getElementById('canvas');
-	cvs.width = grf.width;
-	cvs.height = grf.height;
-	cvs.getContext('2d').drawImage(grf, 0, 0);
+	cvs.width = bmp.width;
+	cvs.height = bmp.height;
+	cvs.getContext('2d').drawImage(bmp, 0, 0);
 
 	// Create the ZPL with a source comment
 	document.getElementById('zpltext').value = 
 		'^FX ' + _filename + ' (' + res.width + 'x' + res.height + 'px, ' +
 			 rot + '-Rotate, ' + black + '% Black)^FS\n' +
-		'^GFA,' + res.length + ',' + res.length + ',' + res.rowlen + ',' + res.z64 + '\n';
+		'^GFA,' + res.length + ',' + res.length + ',' + res.rowlen + ',' + (res.z64||res.acs) + '\n';
 }
 function copyZPL() {
 	let ta = document.getElementById('zpltext');
@@ -227,6 +238,52 @@ function z64ToCanvas(z64, rowl) {
 	ctx.putImageData(bmap, 0, 0);
 	return cvs;
 }
+function acsToCanvas(acs, rowl) {
+    let hex = acs.replace(/[g-zG-Y]+([0-9a-fA-F])/g, ($0, $1) => {
+            let rep = 0;
+            for (let i = 0, l = $0.length-1; i < l; i++) {
+                let cd = $0.charCodeAt(i);
+                if (cd < 90) { // 'Z'
+                    rep += cd - 70;
+                } else {
+                    rep += (cd - 102) * 20;
+                }
+            }
+            return $1.repeat(rep);
+        });
+
+    let bytes = Array(hex.length/2);
+    for (let i = 0, l = hex.length; i < l; i += 2) {
+        bytes[i>>1] = parseInt(hex.substr(i,2), 16);
+    }
+
+	let l = bytes.length;
+	let w = rowl * 8;		// rowl is in bytes
+	let h = ~~(l / rowl);
+
+	// Render the GRF to a canvas
+	let cvs = document.createElement('canvas');
+	cvs.width  = w;
+	cvs.height = h;
+
+	let ctx  = cvs.getContext('2d');
+	let bmap = ctx.getImageData(0, 0, w, h);
+	let data = bmap.data;
+	let offs = 0;
+	for (let i = 0; i < l; i++) {
+		let byte = bytes[i];
+		for (let bit = 0x80; bit; bit = bit >>> 1, offs += 4) {
+			if (bit & byte) {
+				data[offs]   = 0;
+				data[offs+1] = 0;
+				data[offs+2] = 0;
+				data[offs+3] = 255;	// Fully opaque
+			}
+		}
+	}
+	ctx.putImageData(bmap, 0, 0);
+	return cvs;
+}
 </script>
 </head>
 <body>
@@ -252,6 +309,11 @@ function z64ToCanvas(z64, rowl) {
 			<span>1..99</span>
         <td><label for="notrim">
 			<input type="checkbox" id="notrim" value="Y">&nbsp;No&nbsp;Trim</label>
+	<tr><th>ZPL Format<td colspan=2>
+        <label for="z64comp"><input type="radio" name="compress" value="Z64"
+            id="z64comp" checked>Z64</label>
+        <label for="acscomp"><input type="radio" name="compress" value="ACS"
+            id="acscomp">ACS</label>
 	</table>
 </div>
 <textarea rows=24 cols=112 id="zpltext" readonly></textarea>
