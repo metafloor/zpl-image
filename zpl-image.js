@@ -35,7 +35,8 @@ function imageToZ64(img, opts) {
 
 	cvs.width  = +img.width || img.offsetWidth;
 	cvs.height = +img.height || img.offsetHeight;
-	ctx.drawImage(img, 0, 0);
+	ctx.imageSmoothingQuality = 'high'; // in case canvas needs to scale image
+	ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
 
 	let pixels = ctx.getImageData(0, 0, cvs.width, cvs.height);
 	return rgbaToZ64(pixels.data, pixels.width, opts);
