@@ -338,9 +338,9 @@ function monochrome(rgba, width, height, black, notrim) {
 	let cy = maxy - miny + 1;
 	let buf = new Uint8Array(cx * cy);
 	let idx = 0;
-	for (y = miny; y <= maxy; y++) {
+	for (let y = miny; y <= maxy; y++) {
 		let i = (y * width + minx) * 4;
-		for (x = minx; x <= maxx; x++) {
+		for (let x = minx; x <= maxx; x++) {
 			// Alpha blend with white.
 			let a = rgba[i+3] / 255;
 			let r = rgba[i] * .3 * a + 255 * (1 - a);
@@ -427,7 +427,7 @@ function crc16(s) {
 	let crc = 0;
 	let j, i;
 
-	for (i = 0; i < s.length; i++) {
+	for (let i = 0; i < s.length; i++) {
 		c = s.charCodeAt(i);
 		if (c > 255) {
 			throw new RangeError();
