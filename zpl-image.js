@@ -299,6 +299,7 @@ function right(mono) {
 // empty space around the edges of the image if !notrim.
 function monochrome(rgba, width, height, black, notrim) {
 	// Convert black from percent to 0..255 value
+	let y = 0, x = 0;
 	black = 255 * black / 100;
 
 	let minx, maxx, miny, maxy;
@@ -425,7 +426,7 @@ function crc16(s) {
 	// This is not an accumlating crc routine.  Normally, the acc is intialized to
 	// 0xffff then inverted on each call.  We just start with 0.
 	let crc = 0;
-	let j, i;
+	let j, i, c;
 
 	for (i = 0; i < s.length; i++) {
 		c = s.charCodeAt(i);
